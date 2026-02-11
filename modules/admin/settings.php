@@ -1,5 +1,5 @@
 <?php
-// modules/admin/settings.php
+// modules/admin/settings.php - VERSI TAILWIND v3
 require_once '../../includes/database.php';
 require_once '../../includes/functions.php';
 
@@ -68,404 +68,406 @@ $karyawan_list = $db->query("SELECT * FROM karyawan WHERE id_cabang = ? ORDER BY
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Pengaturan Admin - Sistem Kasir Botol</title>
+
+    <!-- Tailwind CSS v3 -->
+    <link href="../../src/output.css" rel="stylesheet">
+
     <style>
-        /* ===== RESET & BASE ===== */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Arial', sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            font-size: 20px;
-            padding: 20px;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-
-        /* ===== HEADER ===== */
-        .header {
-            background: linear-gradient(to right, #34495e, #2c3e50);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .header h1 { font-size: 36px; margin-bottom: 10px; }
-        .header p { font-size: 20px; opacity: 0.9; }
-
-        /* ===== NAVIGASI ===== */
-        .nav-desktop {
-            display: flex;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .nav-desktop a {
-            flex: 1;
-            padding: 20px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            text-decoration: none;
-            color: #666;
-            background: #f8f9fa;
-            transition: all 0.3s;
-            border-bottom: 4px solid transparent;
-        }
-        .nav-desktop a:hover { background: #e9ecef; color: #2c3e50; }
-        .nav-desktop a.active {
-            background: white;
-            color: #2c3e50;
-            border-bottom: 4px solid #2c3e50;
+        /* Custom untuk touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            input, select, button, a, .tab-btn {
+                font-size: 16px !important;
+                min-height: 50px;
+            }
         }
 
-        /* ===== ALERT ===== */
-        .alert {
-            padding: 20px;
-            margin-bottom: 25px;
-            border-radius: 12px;
-            font-size: 18px;
-        }
-        .alert.success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 6px solid #28a745;
-        }
-        .alert.error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 6px solid #dc3545;
+        /* Responsive table */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 1rem;
         }
 
-        /* ===== TAB ===== */
-        .tab-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 20px;
-            font-size: 22px;
-            font-weight: bold;
-            border: none;
-            background: #f8f9fa;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: #666;
-        }
-        .tab-btn.active {
-            background: #2c3e50;
-            color: white;
-        }
+        /* Tab transitions */
         .tab-content {
             display: none;
         }
         .tab-content.active {
             display: block;
         }
-
-        /* ===== CARD ===== */
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        .card-title {
-            font-size: 26px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 25px;
-            border-left: 6px solid #2c3e50;
-            padding-left: 20px;
-        }
-
-        /* ===== FORM ===== */
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #2c3e50;
-        }
-        .input-large {
-            width: 100%;
-            padding: 16px;
-            font-size: 18px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            transition: all 0.3s;
-        }
-        .input-large:focus {
-            border-color: #2c3e50;
-            box-shadow: 0 0 0 3px rgba(44,62,80,0.1);
-            outline: none;
-        }
-        .btn-submit {
-            width: 100%;
-            padding: 18px;
-            font-size: 22px;
-            font-weight: bold;
-            background: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-submit:hover { background: #2ecc71; }
-
-        /* ===== TABEL ===== */
-        .table-responsive {
-            overflow-x: auto;
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 18px;
-        }
-        th {
-            background: #f8f9fa;
-            padding: 18px;
-            text-align: left;
-            font-weight: bold;
-        }
-        td {
-            padding: 18px;
-            border-bottom: 1px solid #eee;
-        }
-        .btn-delete {
-            padding: 10px 16px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-delete:hover { background: #c0392b; }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            body { font-size: 18px; padding: 10px; }
-            .header h1 { font-size: 28px; }
-            .nav-desktop { flex-wrap: wrap; }
-            .nav-desktop a { padding: 15px; font-size: 18px; }
-            .tab-btn { font-size: 18px; padding: 15px; }
-            .card { padding: 20px; }
-            .card-title { font-size: 22px; }
-            th, td { padding: 12px; font-size: 16px; }
-        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <!-- HEADER -->
-        <div class="header">
-            <h1>⚙️ PENGATURAN ADMIN</h1>
-            <p>Kelola Barang, Karyawan, dan Sistem</p>
+<body class="bg-gray-100 font-sans text-base md:text-xl p-4 md:p-5 text-gray-800">
+<div class="max-w-7xl mx-auto">
+
+    <!-- HEADER -->
+    <div class="bg-gradient-to-r from-slate-700 to-slate-900 text-white px-6 md:px-8 py-8 md:py-10 rounded-2xl shadow-xl mb-6 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold mb-2">⚙️ PENGATURAN ADMIN</h1>
+        <p class="text-lg md:text-xl opacity-90">Kelola Barang, Karyawan, dan Sistem</p>
+    </div>
+
+    <!-- NAVIGASI DESKTOP -->
+    <div class="flex flex-wrap bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <a href="../../dashboard.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-slate-800 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-slate-800">
+            🏠 DASHBOARD
+        </a>
+        <a href="../gudang/" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-slate-800 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-slate-800">
+            📦 GUDANG
+        </a>
+        <a href="../kasir/" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-slate-800 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-slate-800">
+            💳 KASIR
+        </a>
+        <a href="laporan.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-slate-800 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-slate-800">
+            📊 LAPORAN
+        </a>
+        <a href="settings.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-slate-800 bg-gray-50 border-b-4 border-slate-800">
+            ⚙️ PENGATURAN
+        </a>
+        <a href="../../logout.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-red-600 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-red-600">
+            🚪 KELUAR
+        </a>
+    </div>
+
+    <!-- PESAN SUKSES / ERROR -->
+    <?php if ($success): ?>
+        <div class="bg-green-100 text-green-800 p-5 mb-6 rounded-xl border-l-8 border-green-600 text-lg md:text-xl flex items-center gap-3">
+            <span class="text-2xl">✅</span>
+            <span><?php echo $success; ?></span>
         </div>
+    <?php endif; ?>
 
-        <!-- NAVIGASI DESKTOP -->
-        <div class="nav-desktop">
-            <a href="../../dashboard.php">🏠 DASHBOARD</a>
-            <a href="../gudang/">📦 GUDANG</a>
-            <a href="../kasir/">💳 KASIR</a>
-            <a href="laporan.php">📊 LAPORAN</a>
-            <a href="settings.php" class="active">⚙️ PENGATURAN</a>
-            <a href="../../logout.php">🚪 KELUAR</a>
+    <?php if ($error): ?>
+        <div class="bg-red-100 text-red-800 p-5 mb-6 rounded-xl border-l-8 border-red-600 text-lg md:text-xl flex items-center gap-3">
+            <span class="text-2xl">❌</span>
+            <span><?php echo $error; ?></span>
         </div>
+    <?php endif; ?>
 
-        <!-- PESAN SUKSES / ERROR -->
-        <?php if ($success): ?>
-        <div class="alert success"><?php echo $success; ?></div>
-        <?php endif; ?>
-        <?php if ($error): ?>
-        <div class="alert error"><?php echo $error; ?></div>
-        <?php endif; ?>
+    <!-- TAB BUTTONS -->
+    <div class="flex flex-wrap gap-3 mb-8">
+        <button id="tab1-btn" onclick="openTab('barang')"
+                class="tab-btn flex-1 py-5 px-4 text-xl md:text-2xl font-bold rounded-xl transition-all duration-300 <?php echo !isset($_GET['tab']) || $_GET['tab'] == 'barang' ? 'bg-slate-800 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?>">
+            📦 KELOLA BARANG
+        </button>
+        <button id="tab2-btn" onclick="openTab('karyawan')"
+                class="tab-btn flex-1 py-5 px-4 text-xl md:text-2xl font-bold rounded-xl transition-all duration-300 <?php echo isset($_GET['tab']) && $_GET['tab'] == 'karyawan' ? 'bg-slate-800 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?>">
+            👥 KELOLA KARYAWAN
+        </button>
+        <button id="tab3-btn" onclick="openTab('system')"
+                class="tab-btn flex-1 py-5 px-4 text-xl md:text-2xl font-bold rounded-xl transition-all duration-300 <?php echo isset($_GET['tab']) && $_GET['tab'] == 'system' ? 'bg-slate-800 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'; ?>">
+            🔧 SISTEM
+        </button>
+    </div>
 
-        <!-- TAB BUTTONS -->
-        <div class="tab-buttons">
-            <button id="tab1-btn" class="tab-btn active" onclick="openTab('barang')">📦 KELOLA BARANG</button>
-            <button id="tab2-btn" class="tab-btn" onclick="openTab('karyawan')">👥 KELOLA KARYAWAN</button>
-            <button id="tab3-btn" class="tab-btn" onclick="openTab('system')">🔧 SISTEM</button>
-        </div>
+    <!-- ========== TAB 1 : KELOLA BARANG ========== -->
+    <div id="tab-barang" class="tab-content <?php echo !isset($_GET['tab']) || $_GET['tab'] == 'barang' ? 'active' : ''; ?>">
 
-        <!-- ========== TAB 1 : KELOLA BARANG ========== -->
-        <div id="tab-barang" class="tab-content active">
-            <!-- Form Tambah Barang -->
-            <div class="card">
-                <div class="card-title">➕ TAMBAH BARANG BARU</div>
-                <form method="POST" action="">
-                    <input type="hidden" name="action" value="add_barang">
-                    
-                    <div class="form-group">
-                        <label>Kode Barang <span style="color: #e74c3c;">*</span></label>
-                        <input type="text" name="kode_barang" class="input-large" placeholder="Contoh: BTL-010" required>
+        <!-- Form Tambah Barang -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl mb-8">
+            <div class="flex items-center mb-6 border-l-8 border-slate-800 pl-5">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800">➕ TAMBAH BARANG BARU</h2>
+            </div>
+
+            <form method="POST" action="">
+                <input type="hidden" name="action" value="add_barang">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">
+                            Kode Barang <span class="text-red-600">*</span>
+                        </label>
+                        <input type="text" name="kode_barang"
+                               class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-slate-800 focus:ring-4 focus:ring-slate-200 outline-none transition-all"
+                               placeholder="Contoh: BTL-010" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Nama Barang <span style="color: #e74c3c;">*</span></label>
-                        <input type="text" name="nama_barang" class="input-large" placeholder="Contoh: Aqua 600ml" required>
+
+                    <div>
+                        <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">
+                            Nama Barang <span class="text-red-600">*</span>
+                        </label>
+                        <input type="text" name="nama_barang"
+                               class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-slate-800 focus:ring-4 focus:ring-slate-200 outline-none transition-all"
+                               placeholder="Contoh: Aqua 600ml" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Satuan</label>
-                        <select name="satuan" class="input-large">
+
+                    <div>
+                        <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">Satuan</label>
+                        <select name="satuan" class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-slate-800 focus:ring-4 focus:ring-slate-200 outline-none transition-all">
                             <option value="botol">Botol</option>
                             <option value="dus">Dus</option>
                         </select>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Harga Beli (Rp) <span style="color: #e74c3c;">*</span></label>
-                        <input type="number" name="harga_beli" class="input-large" min="0" value="0" required>
+
+                    <div>
+                        <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">
+                            Harga Beli (Rp) <span class="text-red-600">*</span>
+                        </label>
+                        <input type="number" name="harga_beli"
+                               class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-slate-800 focus:ring-4 focus:ring-slate-200 outline-none transition-all"
+                               min="0" value="0" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Harga Jual (Rp) <span style="color: #e74c3c;">*</span></label>
-                        <input type="number" name="harga_jual" class="input-large" min="0" value="0" required>
+
+                    <div>
+                        <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">
+                            Harga Jual (Rp) <span class="text-red-600">*</span>
+                        </label>
+                        <input type="number" name="harga_jual"
+                               class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-slate-800 focus:ring-4 focus:ring-slate-200 outline-none transition-all"
+                               min="0" value="0" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Stok Minimal</label>
-                        <input type="number" name="stok_minimal" class="input-large" min="1" value="10">
+
+                    <div>
+                        <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">Stok Minimal</label>
+                        <input type="number" name="stok_minimal"
+                               class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-slate-800 focus:ring-4 focus:ring-slate-200 outline-none transition-all"
+                               min="1" value="10">
                     </div>
-                    
-                    <button type="submit" class="btn-submit">💾 SIMPAN BARANG</button>
-                </form>
-                <div style="text-align: right; margin-bottom: 20px;">
-                    <a href="tambah_stok.php" style="display: inline-block; padding: 16px 30px; background: #3498db; color: white; text-decoration: none; border-radius: 10px; font-size: 20px; font-weight: bold;">
-                        ➕ TAMBAH STOK (ADMIN)
-                    </a>
                 </div>
+
+                <div class="mt-6">
+                    <button type="submit"
+                            class="w-full py-5 px-4 text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-lg hover:-translate-y-1">
+                        💾 SIMPAN BARANG
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-right mt-6">
+                <a href="tambah_stok.php"
+                   class="inline-block px-8 py-4 text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:-translate-y-1">
+                    ➕ TAMBAH STOK (ADMIN)
+                </a>
+            </div>
+        </div>
+
+        <!-- Daftar Barang -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+            <div class="flex items-center mb-6 border-l-8 border-slate-800 pl-5">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800">📋 DAFTAR BARANG</h2>
             </div>
 
-            <!-- Daftar Barang -->
-            <div class="card">
-                <div class="card-title">📋 DAFTAR BARANG</div>
-                <?php if ($barang_list->num_rows > 0): ?>
+            <?php if ($barang_list->num_rows > 0): ?>
                 <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Kode</th>
-                                <th>Nama</th>
-                                <th>Satuan</th>
-                                <th>Harga Beli</th>
-                                <th>Harga Jual</th>
-                                <th>Stok Min</th>
-                                <th>Aksi</th>
-                            </tr>
+                    <table class="w-full text-base md:text-lg">
+                        <thead class="bg-gray-100">
+                        <tr>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Kode</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Nama</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Satuan</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Harga Beli</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Harga Jual</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Stok Min</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Aksi</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            <?php while ($b = $barang_list->fetch_assoc()): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($b['kode_barang']); ?></td>
-                                <td><?php echo htmlspecialchars($b['nama_barang']); ?></td>
-                                <td><?php echo $b['satuan']; ?></td>
-                                <td><?php echo formatRupiah($b['harga_beli']); ?></td>
-                                <td><?php echo formatRupiah($b['harga_jual']); ?></td>
-                                <td><?php echo $b['stok_minimal']; ?></td>
-                                <td>
-                                    <a href="?delete=<?php echo $b['id_barang']; ?>" 
+                        <?php while ($b = $barang_list->fetch_assoc()): ?>
+                            <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                                <td class="p-4 md:p-5 font-mono"><?php echo htmlspecialchars($b['kode_barang']); ?></td>
+                                <td class="p-4 md:p-5 font-medium"><?php echo htmlspecialchars($b['nama_barang']); ?></td>
+                                <td class="p-4 md:p-5"><?php echo $b['satuan']; ?></td>
+                                <td class="p-4 md:p-5"><?php echo formatRupiah($b['harga_beli']); ?></td>
+                                <td class="p-4 md:p-5 font-bold text-green-700"><?php echo formatRupiah($b['harga_jual']); ?></td>
+                                <td class="p-4 md:p-5"><?php echo $b['stok_minimal']; ?></td>
+                                <td class="p-4 md:p-5">
+                                    <a href="?delete=<?php echo $b['id_barang']; ?>"
                                        onclick="return confirm('Hapus barang <?php echo htmlspecialchars($b['nama_barang']); ?>?')"
-                                       class="btn-delete">🗑️ Hapus</a>
+                                       class="inline-block px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-sm md:text-base font-bold rounded-lg transition-all duration-300 shadow-md">
+                                        🗑️ Hapus
+                                    </a>
                                 </td>
                             </tr>
-                            <?php endwhile; ?>
+                        <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
-                <?php else: ?>
-                <p style="font-size: 20px; color: #666; text-align: center;">Belum ada barang.</p>
-                <?php endif; ?>
-            </div>
+            <?php else: ?>
+                <div class="bg-gray-50 p-10 rounded-xl text-center">
+                    <div class="text-7xl mb-4">📦</div>
+                    <p class="text-xl md:text-2xl text-gray-600">Belum ada barang.</p>
+                    <p class="text-lg text-gray-500 mt-2">Silakan tambahkan barang baru.</p>
+                </div>
+            <?php endif; ?>
         </div>
+    </div>
 
-        <!-- ========== TAB 2 : KELOLA KARYAWAN ========== -->
-        <div id="tab-karyawan" class="tab-content">
-            <div class="card">
-                <div class="card-title">👥 DAFTAR KARYAWAN</div>
-                <?php if ($karyawan_list->num_rows > 0): ?>
+    <!-- ========== TAB 2 : KELOLA KARYAWAN ========== -->
+    <div id="tab-karyawan" class="tab-content <?php echo isset($_GET['tab']) && $_GET['tab'] == 'karyawan' ? 'active' : ''; ?>">
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+            <div class="flex items-center mb-6 border-l-8 border-slate-800 pl-5">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800">👥 DAFTAR KARYAWAN</h2>
+            </div>
+
+            <?php if ($karyawan_list->num_rows > 0): ?>
                 <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Nama</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Terakhir Login</th>
-                            </tr>
+                    <table class="w-full text-base md:text-lg">
+                        <thead class="bg-gray-100">
+                        <tr>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Nama</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Role</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Status</th>
+                            <th class="p-4 md:p-5 text-left font-bold text-gray-800">Terakhir Login</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            <?php while ($k = $karyawan_list->fetch_assoc()): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($k['nama_karyawan']); ?></td>
-                                <td><?php echo $k['is_admin'] ? 'Admin' : 'Kasir'; ?></td>
-                                <td><?php echo $k['last_login'] ? 'Aktif' : 'Belum login'; ?></td>
-                                <td><?php echo $k['last_login'] ? date('d/m/Y H:i', strtotime($k['last_login'])) : '-'; ?></td>
+                        <?php while ($k = $karyawan_list->fetch_assoc()): ?>
+                            <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                                <td class="p-4 md:p-5 font-medium"><?php echo htmlspecialchars($k['nama_karyawan']); ?></td>
+                                <td class="p-4 md:p-5">
+                                    <?php if ($k['is_admin']): ?>
+                                        <span class="px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm md:text-base font-bold">Admin</span>
+                                    <?php else: ?>
+                                        <span class="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm md:text-base font-bold">Kasir</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="p-4 md:p-5">
+                                    <?php if ($k['last_login']): ?>
+                                        <span class="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm md:text-base font-bold">🟢 Aktif</span>
+                                    <?php else: ?>
+                                        <span class="px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm md:text-base">⚪ Belum login</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="p-4 md:p-5 text-gray-700">
+                                    <?php echo $k['last_login'] ? date('d/m/Y H:i', strtotime($k['last_login'])) : '-'; ?>
+                                </td>
                             </tr>
-                            <?php endwhile; ?>
+                        <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
-                <?php else: ?>
-                <p>Tidak ada data.</p>
-                <?php endif; ?>
-                <p style="margin-top: 20px; color: #666;">* Untuk menambah/edit karyawan, hubungi developer.</p>
-            </div>
-        </div>
 
-        <!-- ========== TAB 3 : SISTEM ========== -->
-        <div id="tab-system" class="tab-content">
-            <div class="card">
-                <div class="card-title">🔧 PENGATURAN SISTEM</div>
-                <div style="margin-bottom: 30px;">
-                    <h3 style="font-size: 22px; margin-bottom: 15px;">💾 Backup Database</h3>
-                    <p style="margin-bottom: 15px;">Buat cadangan data sistem ke file SQL.</p>
-                    <button onclick="alert('Fitur backup sedang dikembangkan')" 
-                            style="padding: 16px 30px; background: #27ae60; color: white; border: none; border-radius: 10px; font-size: 20px;">
-                        💾 BACKUP SEKARANG
-                    </button>
+                <div class="mt-6 p-5 bg-blue-50 rounded-xl border-l-8 border-blue-600">
+                    <p class="text-lg md:text-xl text-blue-800 flex items-center gap-3">
+                        <span class="text-2xl">ℹ️</span>
+                        * Untuk menambah/edit karyawan, hubungi developer.
+                    </p>
                 </div>
-                <div>
-                    <h3 style="font-size: 22px; margin-bottom: 15px;">🔄 Reset Data Bulanan</h3>
-                    <p style="margin-bottom: 15px; color: #e74c3c;">Hapus semua transaksi dan stock opname bulan lalu. (Tidak dapat dikembalikan!)</p>
-                    <button onclick="if(confirm('Yakin akan reset data?')) alert('Fitur reset dikunci sementara');" 
-                            style="padding: 16px 30px; background: #e74c3c; color: white; border: none; border-radius: 10px; font-size: 20px;">
-                        ⚠️ RESET BULANAN
-                    </button>
+            <?php else: ?>
+                <div class="bg-gray-50 p-10 rounded-xl text-center">
+                    <div class="text-7xl mb-4">👤</div>
+                    <p class="text-xl md:text-2xl text-gray-600">Tidak ada data karyawan.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- ========== TAB 3 : SISTEM ========== -->
+    <div id="tab-system" class="tab-content <?php echo isset($_GET['tab']) && $_GET['tab'] == 'system' ? 'active' : ''; ?>">
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+            <div class="flex items-center mb-6 border-l-8 border-slate-800 pl-5">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800">🔧 PENGATURAN SISTEM</h2>
+            </div>
+
+            <!-- Backup Database -->
+            <div class="mb-10 p-6 bg-gray-50 rounded-xl border-2 border-gray-200">
+                <div class="flex items-start gap-4">
+                    <div class="text-5xl">💾</div>
+                    <div class="flex-1">
+                        <h3 class="text-2xl md:text-3xl font-bold text-gray-800 mb-3">Backup Database</h3>
+                        <p class="text-lg md:text-xl text-gray-700 mb-5">Buat cadangan data sistem ke file SQL.</p>
+                        <button onclick="alert('Fitur backup sedang dikembangkan')"
+                                class="px-8 py-4 text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-lg hover:-translate-y-1">
+                            💾 BACKUP SEKARANG
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reset Data Bulanan -->
+            <div class="p-6 bg-red-50 rounded-xl border-2 border-red-200">
+                <div class="flex items-start gap-4">
+                    <div class="text-5xl">⚠️</div>
+                    <div class="flex-1">
+                        <h3 class="text-2xl md:text-3xl font-bold text-red-800 mb-3">Reset Data Bulanan</h3>
+                        <p class="text-lg md:text-xl text-red-700 mb-5 font-semibold">
+                            Hapus semua transaksi dan stock opname bulan lalu. (Tidak dapat dikembalikan!)
+                        </p>
+                        <button onclick="if(confirm('Yakin akan reset data?')) alert('Fitur reset dikunci sementara');"
+                                class="px-8 py-4 text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-red-600 to-red-700 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:-translate-y-1">
+                            ⚠️ RESET BULANAN
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
+    <!-- FOOTER -->
+    <div class="text-center mt-8 text-gray-500 text-base md:text-lg">
+        <p>© <?php echo date('Y'); ?> Sistem Kasir Botol - Pengaturan Admin</p>
+    </div>
+</div>
+
+<script>
     function openTab(tabName) {
         // Sembunyikan semua tab
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        
+        document.querySelectorAll('.tab-content').forEach(el => {
+            el.classList.remove('active');
+        });
+
+        // Nonaktifkan semua tombol tab
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('bg-slate-800', 'text-white', 'shadow-lg');
+            btn.classList.add('bg-gray-200', 'text-gray-700');
+        });
+
         // Tampilkan tab yang dipilih
         document.getElementById('tab-' + tabName).classList.add('active');
+
         // Aktifkan tombol yang sesuai
-        if (tabName === 'barang') document.getElementById('tab1-btn').classList.add('active');
-        if (tabName === 'karyawan') document.getElementById('tab2-btn').classList.add('active');
-        if (tabName === 'system') document.getElementById('tab3-btn').classList.add('active');
+        if (tabName === 'barang') {
+            document.getElementById('tab1-btn').classList.remove('bg-gray-200', 'text-gray-700');
+            document.getElementById('tab1-btn').classList.add('bg-slate-800', 'text-white', 'shadow-lg');
+        } else if (tabName === 'karyawan') {
+            document.getElementById('tab2-btn').classList.remove('bg-gray-200', 'text-gray-700');
+            document.getElementById('tab2-btn').classList.add('bg-slate-800', 'text-white', 'shadow-lg');
+        } else if (tabName === 'system') {
+            document.getElementById('tab3-btn').classList.remove('bg-gray-200', 'text-gray-700');
+            document.getElementById('tab3-btn').classList.add('bg-slate-800', 'text-white', 'shadow-lg');
+        }
+
+        // Update URL tanpa reload
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabName);
+        window.history.pushState({}, '', url);
     }
-    </script>
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make tables responsive
+        const tables = document.querySelectorAll('table');
+        tables.forEach(table => {
+            if (!table.parentElement.classList.contains('table-responsive')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-responsive';
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+            }
+        });
+
+        // Touch feedback
+        document.querySelectorAll('button, a, .tab-btn').forEach(el => {
+            el.addEventListener('touchstart', function() {
+                this.style.opacity = '0.7';
+            });
+            el.addEventListener('touchend', function() {
+                this.style.opacity = '1';
+            });
+        });
+
+        // iOS zoom fix
+        document.querySelectorAll('input, select').forEach(el => {
+            el.style.fontSize = '16px';
+        });
+
+        // Auto focus tab dari URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab) {
+            openTab(tab);
+        }
+    });
+</script>
 </body>
 </html>

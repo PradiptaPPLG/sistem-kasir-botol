@@ -1,0 +1,20 @@
+{
+  "name": "sistem-kasir-botol",
+  "version": "0.0.1",
+  "description": "Project POS Kasir Botol",
+  "main": "index.php",
+  "scripts": {
+    "dev": "npx tailwindcss -i ./src/input.css -o ./src/output.css --watch",
+    "build": "npx tailwindcss -i ./src/input.css -o ./src/output.css --minify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "postcss": "^8.5.6"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

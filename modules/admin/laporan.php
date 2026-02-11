@@ -1,5 +1,5 @@
 <?php
-// modules/admin/laporan.php
+// modules/admin/laporan.php - VERSI TAILWIND v3
 require_once '../../includes/database.php';
 require_once '../../includes/functions.php';
 
@@ -49,312 +49,240 @@ $stock_loss = $db->query("
     GROUP BY so.id_barang
     ORDER BY total_kerugian DESC
 ", [$cabang_id, $start_date, $end_date]);
+
+// Hitung total kerugian untuk laporan
+$total_kerugian = 0;
+if ($stock_loss->num_rows > 0) {
+    $temp_result = $stock_loss;
+    while ($row = $temp_result->fetch_assoc()) {
+        $total_kerugian += $row['total_kerugian'];
+    }
+    $stock_loss->data_seek(0);
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Laporan Admin - Sistem Kasir Botol</title>
+
+    <!-- Tailwind CSS v3 -->
+    <link href="../../src/output.css" rel="stylesheet">
+
     <style>
-        /* ===== RESET & BASE ===== */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Arial', sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            font-size: 20px;
-            padding: 20px;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-
-        /* ===== HEADER ===== */
-        .header {
-            background: linear-gradient(to right, #9b59b6, #8e44ad);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .header h1 { font-size: 36px; margin-bottom: 10px; }
-        .header p { font-size: 20px; opacity: 0.9; }
-
-        /* ===== NAVIGASI ===== */
-        .nav-desktop {
-            display: flex;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .nav-desktop a {
-            flex: 1;
-            padding: 20px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            text-decoration: none;
-            color: #666;
-            background: #f8f9fa;
-            transition: all 0.3s;
-            border-bottom: 4px solid transparent;
-        }
-        .nav-desktop a:hover { background: #e9ecef; color: #2c3e50; }
-        .nav-desktop a.active {
-            background: white;
-            color: #9b59b6;
-            border-bottom: 4px solid #9b59b6;
+        /* Custom untuk print */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0.5in; }
         }
 
-        /* ===== FILTER ===== */
-        .filter-box {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        .filter-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            align-items: end;
-        }
-        .form-group { margin-bottom: 0; }
-        label {
-            display: block;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #2c3e50;
-        }
-        .input-large {
-            width: 100%;
-            padding: 16px;
-            font-size: 18px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-        }
-        .btn-filter {
-            width: 100%;
-            padding: 16px;
-            font-size: 20px;
-            font-weight: bold;
-            background: #9b59b6;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-filter:hover { background: #8e44ad; }
-
-        /* ===== SECTION CARD ===== */
-        .section-card {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        .section-title {
-            font-size: 26px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 25px;
-            border-left: 6px solid #9b59b6;
-            padding-left: 20px;
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            input, select, button, a {
+                font-size: 16px !important;
+                min-height: 50px;
+            }
         }
 
-        /* ===== TABEL ===== */
+        /* Responsive table */
         .table-responsive {
             overflow-x: auto;
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 18px;
-        }
-        th {
-            background: #f8f9fa;
-            padding: 18px;
-            text-align: left;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        td {
-            padding: 18px;
-            border-bottom: 1px solid #eee;
-        }
-        .text-danger { color: #c0392b; font-weight: bold; }
-        .text-success { color: #27ae60; font-weight: bold; }
-
-        /* ===== TOTAL KERUGIAN ===== */
-        .loss-box {
-            background: #ffebee;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
-            text-align: center;
-        }
-        .loss-box p {
-            font-size: 24px;
-            font-weight: bold;
-            color: #c62828;
-        }
-
-        /* ===== BUTTON EXPORT ===== */
-        .export-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        .btn-export {
-            padding: 16px 30px;
-            font-size: 20px;
-            font-weight: bold;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: white;
-        }
-        .btn-green { background: #27ae60; }
-        .btn-green:hover { background: #2ecc71; }
-        .btn-yellow { background: #f39c12; }
-        .btn-yellow:hover { background: #e67e22; }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            body { font-size: 18px; padding: 10px; }
-            .header h1 { font-size: 28px; }
-            .nav-desktop { flex-wrap: wrap; }
-            .nav-desktop a { padding: 15px; font-size: 18px; }
-            .filter-form { grid-template-columns: 1fr; }
-            .section-card { padding: 20px; }
-            .section-title { font-size: 22px; }
-            th, td { padding: 12px; font-size: 16px; }
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <!-- HEADER -->
-        <div class="header">
-            <h1>📊 LAPORAN ADMIN</h1>
-            <p>Rekap Penjualan & Kehilangan Stok</p>
+<body class="bg-gray-100 font-sans text-base md:text-xl p-4 md:p-5">
+<div class="max-w-7xl mx-auto">
+
+    <!-- HEADER -->
+    <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-6 md:px-8 py-8 md:py-10 rounded-2xl shadow-xl mb-6 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold mb-2">📊 LAPORAN ADMIN</h1>
+        <p class="text-lg md:text-xl opacity-90">Rekap Penjualan & Kehilangan Stok</p>
+    </div>
+
+    <!-- NAVIGASI DESKTOP -->
+    <div class="flex flex-wrap bg-white rounded-xl shadow-md overflow-hidden mb-8 no-print">
+        <a href="../../dashboard.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-purple-700 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-purple-600">
+            🏠 DASHBOARD
+        </a>
+        <a href="../gudang/" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-purple-700 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-purple-600">
+            📦 GUDANG
+        </a>
+        <a href="../kasir/" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-purple-700 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-purple-600">
+            💳 KASIR
+        </a>
+        <a href="laporan.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-purple-700 bg-gray-50 border-b-4 border-purple-600">
+            📊 LAPORAN
+        </a>
+        <a href="settings.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-purple-700 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-purple-600">
+            ⚙️ PENGATURAN
+        </a>
+        <a href="../../logout.php" class="flex-1 py-5 px-2 text-center text-lg md:text-xl font-bold text-gray-600 hover:text-red-600 hover:bg-gray-50 transition-all border-b-4 border-transparent hover:border-red-600">
+            🚪 KELUAR
+        </a>
+    </div>
+
+    <!-- FILTER TANGGAL -->
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl mb-8 no-print">
+        <form method="GET" action="">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
+                <div>
+                    <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">📅 Dari Tanggal</label>
+                    <input type="date" name="start_date" value="<?php echo $start_date; ?>"
+                           class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-200 outline-none transition-all"
+                           required>
+                </div>
+                <div>
+                    <label class="block text-lg md:text-xl font-bold text-gray-800 mb-2">📅 Sampai Tanggal</label>
+                    <input type="date" name="end_date" value="<?php echo $end_date; ?>"
+                           class="w-full p-4 text-lg md:text-xl border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-200 outline-none transition-all"
+                           required>
+                </div>
+                <div>
+                    <button type="submit" class="w-full p-4 text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-purple-600 to-purple-800 rounded-xl hover:from-purple-700 hover:to-purple-900 transition-all duration-300 shadow-lg">
+                        🔍 TAMPILKAN
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- LAPORAN PENJUALAN -->
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl mb-8">
+        <div class="flex items-center mb-6 border-l-8 border-purple-600 pl-5">
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-800">💰 LAPORAN PENJUALAN</h2>
         </div>
 
-        <!-- NAVIGASI DESKTOP -->
-        <div class="nav-desktop">
-            <a href="../../dashboard.php">🏠 DASHBOARD</a>
-            <a href="../gudang/">📦 GUDANG</a>
-            <a href="../kasir/">💳 KASIR</a>
-            <a href="laporan.php" class="active">📊 LAPORAN</a>
-            <a href="settings.php">⚙️ PENGATURAN</a>
-            <a href="../../logout.php">🚪 KELUAR</a>
+        <?php if ($sales_report->num_rows > 0): ?>
+            <div class="table-responsive">
+                <table class="w-full text-base md:text-lg">
+                    <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-4 md:p-5 text-left font-bold text-gray-800">Tanggal</th>
+                        <th class="p-4 md:p-5 text-left font-bold text-gray-800">Jumlah Transaksi</th>
+                        <th class="p-4 md:p-5 text-left font-bold text-gray-800">Total Penjualan</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php while ($row = $sales_report->fetch_assoc()): ?>
+                        <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                            <td class="p-4 md:p-5 text-gray-700"><?php echo tanggalIndo($row['tanggal']); ?></td>
+                            <td class="p-4 md:p-5 text-gray-700 font-semibold"><?php echo $row['jumlah_transaksi']; ?></td>
+                            <td class="p-4 md:p-5 font-bold text-green-700"><?php echo formatRupiah($row['total_penjualan']); ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div class="bg-gray-50 p-8 rounded-xl text-center">
+                <div class="text-6xl mb-4">📄</div>
+                <p class="text-xl md:text-2xl text-gray-600">Tidak ada data penjualan periode ini.</p>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- LAPORAN KEHILANGAN STOK -->
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl mb-8">
+        <div class="flex items-center mb-6 border-l-8 border-red-600 pl-5">
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-800">⚠️ LAPORAN KEHILANGAN STOK</h2>
         </div>
 
-        <!-- FILTER TANGGAL -->
-        <div class="filter-box">
-            <form method="GET" action="">
-                <div class="filter-form">
-                    <div class="form-group">
-                        <label>📅 Dari Tanggal</label>
-                        <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="input-large" required>
-                    </div>
-                    <div class="form-group">
-                        <label>📅 Sampai Tanggal</label>
-                        <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="input-large" required>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn-filter">🔍 TAMPILKAN</button>
+        <?php if ($stock_loss->num_rows > 0): ?>
+            <div class="table-responsive">
+                <table class="w-full text-base md:text-lg">
+                    <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-4 md:p-5 text-left font-bold text-gray-800">Nama Barang</th>
+                        <th class="p-4 md:p-5 text-left font-bold text-gray-800">Jumlah Hilang</th>
+                        <th class="p-4 md:p-5 text-left font-bold text-gray-800">Harga Beli</th>
+                        <th class="p-4 md:p-5 text-left font-bold text-gray-800">Total Kerugian</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php while ($row = $stock_loss->fetch_assoc()): ?>
+                        <tr class="border-b border-gray-200 hover:bg-red-50 transition">
+                            <td class="p-4 md:p-5 text-gray-800 font-medium"><?php echo htmlspecialchars($row['nama_barang']); ?></td>
+                            <td class="p-4 md:p-5 text-red-700 font-bold"><?php echo $row['total_selisih']; ?> unit</td>
+                            <td class="p-4 md:p-5 text-gray-700"><?php echo formatRupiah($row['harga_beli']); ?></td>
+                            <td class="p-4 md:p-5 text-red-700 font-bold"><?php echo formatRupiah($row['total_kerugian']); ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-red-50 p-6 rounded-xl mt-6 text-center">
+                <p class="text-2xl md:text-3xl font-bold text-red-700">
+                    💰 TOTAL KERUGIAN: <?php echo formatRupiah($total_kerugian); ?>
+                </p>
+            </div>
+        <?php else: ?>
+            <div class="bg-green-50 p-8 rounded-xl border-l-8 border-green-600">
+                <div class="flex items-center gap-4">
+                    <div class="text-5xl">✅</div>
+                    <div>
+                        <p class="text-xl md:text-2xl font-bold text-green-800">Tidak ada kehilangan stok!</p>
+                        <p class="text-lg md:text-xl text-green-700">Semua stok aman pada periode ini.</p>
                     </div>
                 </div>
-            </form>
-        </div>
-
-        <!-- LAPORAN PENJUALAN -->
-        <div class="section-card">
-            <div class="section-title">💰 LAPORAN PENJUALAN</div>
-            <?php if ($sales_report->num_rows > 0): ?>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Jumlah Transaksi</th>
-                            <th>Total Penjualan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while ($row = $sales_report->fetch_assoc()): ?>
-                        <tr>
-                            <td><?php echo tanggalIndo($row['tanggal']); ?></td>
-                            <td><?php echo $row['jumlah_transaksi']; ?></td>
-                            <td><?php echo formatRupiah($row['total_penjualan']); ?></td>
-                        </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
             </div>
-            <?php else: ?>
-            <p style="font-size: 20px; color: #666; text-align: center;">Tidak ada data penjualan periode ini.</p>
-            <?php endif; ?>
-        </div>
-
-        <!-- LAPORAN KEHILANGAN STOK -->
-        <div class="section-card">
-            <div class="section-title" style="border-left-color: #e74c3c;">⚠️ LAPORAN KEHILANGAN STOK</div>
-            <?php if ($stock_loss->num_rows > 0): ?>
-                <?php 
-                $total_kerugian = 0;
-                while ($row = $stock_loss->fetch_assoc()) $total_kerugian += $row['total_kerugian'];
-                // Reset pointer
-                $stock_loss->data_seek(0);
-                ?>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nama Barang</th>
-                            <th>Jumlah Hilang</th>
-                            <th>Harga Beli</th>
-                            <th>Total Kerugian</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while ($row = $stock_loss->fetch_assoc()): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($row['nama_barang']); ?></td>
-                            <td class="text-danger"><?php echo $row['total_selisih']; ?> unit</td>
-                            <td><?php echo formatRupiah($row['harga_beli']); ?></td>
-                            <td class="text-danger"><?php echo formatRupiah($row['total_kerugian']); ?></td>
-                        </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
-            <div class="loss-box">
-                <p>💰 TOTAL KERUGIAN: <?php echo formatRupiah($total_kerugian); ?></p>
-            </div>
-            <?php else: ?>
-            <div style="background: #d4edda; padding: 20px; border-radius: 12px;">
-                <p style="font-size: 20px; color: #155724; margin: 0;">✅ Tidak ada kehilangan stok pada periode ini.</p>
-            </div>
-            <?php endif; ?>
-        </div>
-
-        <!-- TOMBOL EXPORT (dummy) -->
-        <div class="export-buttons">
-            <button onclick="window.print()" class="btn-export btn-green">🖨️ CETAK</button>
-            <button onclick="alert('Export Excel sedang dikembangkan')" class="btn-export btn-yellow">📥 EXPORT EXCEL</button>
-        </div>
+        <?php endif; ?>
     </div>
+
+    <!-- TOMBOL EXPORT -->
+    <div class="flex flex-wrap gap-4 justify-center mt-8 no-print">
+        <button onclick="window.print()"
+                class="px-8 py-5 text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-lg hover:-translate-y-1">
+            🖨️ CETAK LAPORAN
+        </button>
+        <button onclick="alert('Export Excel sedang dikembangkan')"
+                class="px-8 py-5 text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl hover:from-yellow-700 hover:to-orange-700 transition-all duration-300 shadow-lg hover:-translate-y-1">
+            📥 EXPORT EXCEL
+        </button>
+    </div>
+
+    <!-- FOOTER INFO -->
+    <div class="text-center mt-8 text-gray-500 text-base md:text-lg no-print">
+        <p>© <?php echo date('Y'); ?> Sistem Kasir Botol - Laporan dihasilkan otomatis</p>
+        <p class="text-sm mt-2">Periode: <?php echo tanggalIndo($start_date); ?> - <?php echo tanggalIndo($end_date); ?></p>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make tables responsive
+        const tables = document.querySelectorAll('table');
+        tables.forEach(table => {
+            if (!table.parentElement.classList.contains('table-responsive')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-responsive';
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+            }
+        });
+
+        // Touch feedback
+        document.querySelectorAll('button, a').forEach(el => {
+            el.addEventListener('touchstart', function() {
+                this.style.opacity = '0.7';
+            });
+            el.addEventListener('touchend', function() {
+                this.style.opacity = '1';
+            });
+        });
+
+        // iOS zoom fix
+        document.querySelectorAll('input, select').forEach(el => {
+            el.style.fontSize = '16px';
+        });
+
+        // Current year for copyright
+        const yearEl = document.querySelector('.current-year');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+    });
+</script>
 </body>
 </html>

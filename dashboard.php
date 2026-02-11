@@ -1,5 +1,5 @@
 <?php
-// dashboard.php - VERSI SUPER CLEAN UNTUK LANGSIA
+// dashboard.php - VERSI TAILWIND v3 UNTUK LANGSIA
 
 // Start session dengan timeout
 if (session_status() === PHP_SESSION_NONE) {
@@ -24,17 +24,27 @@ $is_admin = isset($_SESSION['is_admin']) && $_SESSION['is_admin'];
 
 $today = date('Y-m-d');
 
-// Get data
-$sales_today = $db->query("SELECT SUM(total_harga) as total FROM transaksi_kasir WHERE id_cabang = ? AND DATE(tanggal) = ?", 
-                          [$id_cabang, $today])->fetch_assoc();
+// ============ PERBAIKAN UNTUK PDO ============
 
-$total_transactions = $db->query("SELECT COUNT(*) as total FROM transaksi_kasir WHERE id_cabang = ? AND DATE(tanggal) = ?", 
-                                [$id_cabang, $today])->fetch_assoc();
+// 1. GET SALES TODAY - pake fetch()
+$sales_today = $db->fetchOne(
+        "SELECT SUM(total_harga) as total FROM transaksi_kasir 
+     WHERE id_cabang = ? AND DATE(tanggal) = ?",
+        [$id_cabang, $today]
+);
 
-// Get warnings for admin
+// 2. GET TOTAL TRANSACTIONS - pake fetch()
+$total_transactions = $db->fetchOne(
+        "SELECT COUNT(*) as total FROM transaksi_kasir 
+     WHERE id_cabang = ? AND DATE(tanggal) = ?",
+        [$id_cabang, $today]
+);
+
+// 3. GET WARNINGS - pake fetchAll()
 $warnings = [];
+$total_loss = 0;
 if ($is_admin) {
-    $warnings_result = $db->query("
+    $warnings = $db->fetchAll("
         SELECT b.nama_barang, sg.stok_sistem, sg.stok_fisik, 
                sg.stok_sistem - sg.stok_fisik as selisih,
                b.harga_beli
@@ -44,14 +54,14 @@ if ($is_admin) {
           AND sg.stok_sistem > sg.stok_fisik
         LIMIT 3
     ", [$id_cabang, $today]);
-    
-    while ($row = $warnings_result->fetch_assoc()) {
-        $warnings[] = $row;
+
+    foreach ($warnings as $warning) {
+        $total_loss += $warning['selisih'] * $warning['harga_beli'];
     }
 }
 
-// Get recent transactions
-$recent = $db->query("
+// 4. GET RECENT TRANSACTIONS - pake fetchAll()
+$recent = $db->fetchAll("
     SELECT tk.*, b.nama_barang 
     FROM transaksi_kasir tk
     JOIN barang b ON tk.id_barang = b.id_barang
@@ -59,680 +69,321 @@ $recent = $db->query("
     ORDER BY tk.tanggal DESC
     LIMIT 5
 ", [$id_cabang]);
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Dashboard - Sistem Kasir Botol</title>
+
+    <!-- Tailwind CSS v3 -->
+    <link href="./src/output.css" rel="stylesheet">
+
     <style>
-        /* RESET & BASE */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            font-size: 20px; /* BASE FONT BESAR */
-            line-height: 1.6;
-        }
-        
-        /* HEADER */
-        .header {
-            background: linear-gradient(to right, #2c3e50, #4a6491);
-            color: white;
-            padding: 25px 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .logo-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .logo {
-            font-size: 40px;
-        }
-        
-        .title {
-            font-size: 28px;
-            font-weight: bold;
-        }
-        
-        .user-info {
-            text-align: right;
-        }
-        
-        .user-name {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .user-role {
-            display: inline-block;
-            padding: 8px 15px;
-            background: <?php echo $is_admin ? '#f39c12' : '#27ae60'; ?>;
-            border-radius: 20px;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        
-        /* NAVIGATION */
-        .nav-desktop {
-            display: none;
-        }
-        
-        .nav-mobile {
-            display: flex;
-            justify-content: space-around;
-            padding: 15px 0;
-            background: white;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-        
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-decoration: none;
-            color: #666;
-            padding: 10px;
-            min-width: 70px;
-            transition: all 0.3s;
-        }
-        
-        .nav-item.active {
-            color: #3498db;
-        }
-        
-        .nav-icon {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-        
-        .nav-label {
-            font-size: 14px;
-            font-weight: bold;
-        }
-        
-        /* MAIN CONTENT */
-        .main-content {
-            padding: 20px;
-            padding-bottom: 100px; /* Space for mobile nav */
-        }
-        
-        /* WARNING BOX */
-        .warning-box {
-            background: linear-gradient(to right, #ffecd2, #fcb69f);
-            border-left: 8px solid #e74c3c;
-            padding: 25px;
-            margin-bottom: 25px;
-            border-radius: 12px;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
-        }
-        
-        .warning-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .warning-icon {
-            font-size: 32px;
-            margin-right: 15px;
-        }
-        
-        .warning-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #c0392b;
-        }
-        
-        .warning-table {
-            width: 100%;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-        
-        .warning-table th {
-            background: #f8f9fa;
-            padding: 15px;
-            text-align: left;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .warning-table td {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .warning-loss {
-            background: #ffebee;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 22px;
-            font-weight: bold;
-            color: #c62828;
-        }
-        
-        /* STATS GRID */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border-top: 6px solid;
-        }
-        
-        .stat-card.sales {
-            border-color: #3498db;
-        }
-        
-        .stat-card.transactions {
-            border-color: #2ecc71;
-        }
-        
-        .stat-card.gudang {
-            border-color: #e67e22;
-        }
-        
-        .stat-card.admin {
-            border-color: #9b59b6;
-        }
-        
-        .stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .stat-icon {
-            font-size: 40px;
-        }
-        
-        .stat-info {
-            text-align: right;
-        }
-        
-        .stat-label {
-            font-size: 18px;
-            color: #666;
-        }
-        
-        .stat-sub {
-            font-size: 16px;
-            color: #999;
-        }
-        
-        .stat-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 15px;
-        }
-        
-        .stat-button {
-            display: block;
-            width: 100%;
-            padding: 18px;
-            background: #f8f9fa;
-            border: none;
-            border-radius: 10px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            color: #2c3e50;
-            text-decoration: none;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-        
-        .stat-button:hover {
-            background: #e9ecef;
-            transform: translateY(-2px);
-        }
-        
-        /* RECENT TRANSACTIONS */
-        .section-title {
-            font-size: 26px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .transactions-table {
-            width: 100%;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
-        }
-        
-        .transactions-table th {
-            background: #f8f9fa;
-            padding: 20px;
-            text-align: left;
-            font-weight: bold;
-            color: #333;
-            font-size: 18px;
-        }
-        
-        .transactions-table td {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .transaction-type {
-            display: inline-block;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        
-        .type-pembeli {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .type-penjual {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .no-data {
-            text-align: center;
-            padding: 50px;
-            color: #666;
-            font-size: 22px;
-        }
-        
-        .no-data-icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-            display: block;
-        }
-        
-        /* RESPONSIVE */
-        @media (min-width: 768px) {
-            .nav-mobile {
-                display: none;
-            }
-            
-            .nav-desktop {
-                display: flex;
-                background: white;
-                padding: 0;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            }
-            
-            .nav-desktop a {
-                flex: 1;
-                padding: 25px;
-                text-align: center;
-                text-decoration: none;
-                color: #666;
-                font-size: 20px;
-                font-weight: bold;
-                transition: all 0.3s;
-                border-bottom: 4px solid transparent;
-            }
-            
-            .nav-desktop a:hover,
-            .nav-desktop a.active {
-                color: #3498db;
-                border-bottom-color: #3498db;
-                background: #f8f9fa;
-            }
-            
-            .main-content {
-                padding-bottom: 40px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            body {
-                font-size: 18px;
-            }
-            
-            .header {
-                padding: 20px 15px;
-            }
-            
-            .title {
-                font-size: 24px;
-            }
-            
-            .logo {
-                font-size: 32px;
-            }
-            
-            .user-name {
-                font-size: 20px;
-            }
-            
-            .stat-card {
-                padding: 20px;
-            }
-            
-            .stat-value {
-                font-size: 32px;
-            }
-            
-            .transactions-table th,
-            .transactions-table td {
-                padding: 15px;
-                font-size: 16px;
-            }
-            
-            .section-title {
-                font-size: 22px;
-            }
-        }
-        
-        /* TOUCH FRIENDLY */
-        @media (hover: none) and (pointer: coarse) {
-            .stat-button,
-            .nav-desktop a,
-            .nav-item {
-                min-height: 60px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            input, select, button {
-                font-size: 18px !important;
-            }
-        }
-        
-        /* ANIMATIONS */
+        /* Custom styles yang tidak ada di Tailwind */
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
-        
-        .pulse {
+
+        .animate-pulse-custom {
             animation: pulse 2s infinite;
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .touch-min-height {
+                min-height: 60px;
+            }
+            input, select, button, a {
+                font-size: 16px !important;
+            }
+        }
+
+        /* Fix untuk scroll table di mobile */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
     </style>
 </head>
-<body>
-    <!-- HEADER -->
-    <div class="header">
-        <div class="header-top">
-            <div class="logo-title">
-                <div class="logo">🏪</div>
-                <div>
-                    <div class="title">SISTEM KASIR BOTOL</div>
-                    <div style="font-size: 16px; opacity: 0.9;">Dashboard Utama</div>
-                </div>
+<body class="bg-gray-100 font-sans text-base md:text-xl text-gray-800">
+
+<!-- HEADER -->
+<div class="bg-gradient-to-r from-slate-800 to-blue-900 text-white px-4 md:px-6 py-6 md:py-8 shadow-lg">
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3 md:gap-4">
+            <div class="text-4xl md:text-5xl">🏪</div>
+            <div>
+                <div class="text-2xl md:text-3xl font-bold">SISTEM KASIR BOTOL</div>
+                <div class="text-sm md:text-base opacity-90">Dashboard Utama</div>
             </div>
-            <div class="user-info">
-                <div class="user-name"><?php echo htmlspecialchars($user); ?></div>
-                <div class="user-role"><?php echo $is_admin ? 'ADMIN' : 'KASIR'; ?></div>
+        </div>
+        <div class="text-right">
+            <div class="text-xl md:text-2xl font-bold"><?php echo htmlspecialchars($user); ?></div>
+            <div class="inline-block px-4 py-2 text-sm md:text-base font-bold rounded-full <?php echo $is_admin ? 'bg-yellow-500 text-gray-900' : 'bg-green-600 text-white'; ?>">
+                <?php echo $is_admin ? 'ADMIN' : 'KASIR'; ?>
             </div>
         </div>
     </div>
-    
-    <!-- DESKTOP NAVIGATION -->
-    <nav class="nav-desktop">
-        <a href="modules/kasir/transaksi.php?type=pembeli">💳 KASIR</a>
-        <a href="modules/gudang/">📦 GUDANG</a>
-        <a href="dashboard.php" class="active">🏠 DASHBOARD</a>
-        <?php if ($is_admin): ?>
-        <a href="modules/admin/laporan.php">📊 LAPORAN</a>
-        <?php endif; ?>
-        <a href="logout.php">🚪 KELUAR</a>
-    </nav>
-    
-    <!-- MAIN CONTENT -->
-    <div class="main-content">
-        <!-- WARNINGS (Admin only) -->
-        <?php if ($is_admin && !empty($warnings)): ?>
-        <div class="warning-box pulse">
-            <div class="warning-header">
-                <div class="warning-icon">⚠️</div>
+</div>
+
+<!-- DESKTOP NAVIGATION - hidden on mobile -->
+<div class="hidden md:flex bg-white shadow-md">
+    <a href="modules/kasir/transaksi.php?type=pembeli" class="flex-1 py-6 text-center text-xl font-bold text-gray-600 hover:text-blue-600 hover:bg-gray-50 border-b-4 border-transparent hover:border-blue-500 transition-all">
+        💳 KASIR
+    </a>
+    <a href="modules/gudang/" class="flex-1 py-6 text-center text-xl font-bold text-gray-600 hover:text-blue-600 hover:bg-gray-50 border-b-4 border-transparent hover:border-blue-500 transition-all">
+        📦 GUDANG
+    </a>
+    <a href="dashboard.php" class="flex-1 py-6 text-center text-xl font-bold text-blue-600 bg-gray-50 border-b-4 border-blue-500">
+        🏠 DASHBOARD
+    </a>
+    <?php if ($is_admin): ?>
+        <a href="modules/admin/laporan.php" class="flex-1 py-6 text-center text-xl font-bold text-gray-600 hover:text-blue-600 hover:bg-gray-50 border-b-4 border-transparent hover:border-blue-500 transition-all">
+            📊 LAPORAN
+        </a>
+    <?php endif; ?>
+    <a href="logout.php" class="flex-1 py-6 text-center text-xl font-bold text-gray-600 hover:text-blue-600 hover:bg-gray-50 border-b-4 border-transparent hover:border-blue-500 transition-all">
+        🚪 KELUAR
+    </a>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="p-4 md:p-6 pb-24 md:pb-10">
+
+    <!-- WARNINGS (Admin only) -->
+    <?php if ($is_admin && !empty($warnings)): ?>
+        <div class="bg-gradient-to-r from-orange-50 to-red-50 border-l-8 border-red-600 p-6 mb-8 rounded-xl shadow-lg animate-pulse-custom">
+            <div class="flex items-start gap-4 mb-5">
+                <div class="text-4xl">⚠️</div>
                 <div>
-                    <div class="warning-title">PERINGATAN KEHILANGAN STOK</div>
-                    <div>Stok sistem lebih besar dari stok fisik!</div>
+                    <div class="text-2xl md:text-3xl font-bold text-red-700">PERINGATAN KEHILANGAN STOK</div>
+                    <div class="text-lg text-gray-700">Stok sistem lebih besar dari stok fisik!</div>
                 </div>
             </div>
-            
-            <table class="warning-table">
-                <thead>
+
+            <div class="table-responsive">
+                <table class="w-full bg-white rounded-lg overflow-hidden mb-4">
+                    <thead class="bg-gray-100">
                     <tr>
-                        <th>Barang</th>
-                        <th>Stok Sistem</th>
-                        <th>Stok Fisik</th>
-                        <th>Selisih</th>
+                        <th class="p-4 text-left font-bold text-gray-800">Barang</th>
+                        <th class="p-4 text-left font-bold text-gray-800">Stok Sistem</th>
+                        <th class="p-4 text-left font-bold text-gray-800">Stok Fisik</th>
+                        <th class="p-4 text-left font-bold text-gray-800">Selisih</th>
                     </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $total_loss = 0;
-                    foreach ($warnings as $warning): 
-                        $loss = $warning['selisih'] * $warning['harga_beli'];
-                        $total_loss += $loss;
-                    ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($warning['nama_barang']); ?></td>
-                        <td><?php echo $warning['stok_sistem']; ?></td>
-                        <td><?php echo $warning['stok_fisik']; ?></td>
-                        <td style="color: #e74c3c; font-weight: bold;">
-                            <?php echo $warning['selisih']; ?> botol
-                        </td>
-                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($warnings as $warning): ?>
+                        <tr class="border-b border-gray-200">
+                            <td class="p-4"><?php echo htmlspecialchars($warning['nama_barang']); ?></td>
+                            <td class="p-4"><?php echo $warning['stok_sistem']; ?></td>
+                            <td class="p-4"><?php echo $warning['stok_fisik']; ?></td>
+                            <td class="p-4 text-red-600 font-bold"><?php echo $warning['selisih']; ?> botol</td>
+                        </tr>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
-            
-            <div class="warning-loss">
-                💰 ESTIMASI KERUGIAN: <?php echo formatRupiah($total_loss); ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-red-100 p-5 rounded-lg text-center">
+                <span class="text-2xl md:text-3xl font-bold text-red-700">💰 ESTIMASI KERUGIAN: <?php echo formatRupiah($total_loss); ?></span>
             </div>
         </div>
-        <?php endif; ?>
-        
-        <!-- STATS GRID -->
-        <div class="stats-grid">
-            <!-- Sales Card -->
-            <div class="stat-card sales">
-                <div class="stat-header">
-                    <div class="stat-icon">💰</div>
-                    <div class="stat-info">
-                        <div class="stat-label">Hari Ini</div>
-                        <div class="stat-sub">Penjualan</div>
-                    </div>
+    <?php endif; ?>
+
+    <!-- STATS GRID -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+        <!-- Sales Card -->
+        <div class="bg-white p-6 rounded-xl shadow-md border-t-8 border-blue-500">
+            <div class="flex justify-between items-start mb-4">
+                <div class="text-5xl">💰</div>
+                <div class="text-right">
+                    <div class="text-lg text-gray-600">Hari Ini</div>
+                    <div class="text-sm text-gray-500">Penjualan</div>
                 </div>
-                <div class="stat-value"><?php echo formatRupiah($sales_today['total'] ?? 0); ?></div>
-                <a href="modules/kasir/transaksi.php?type=pembeli" class="stat-button">
-                    ➕ Transaksi Baru
-                </a>
             </div>
-            
-            <!-- Transactions Card -->
-            <div class="stat-card transactions">
-                <div class="stat-header">
-                    <div class="stat-icon">📝</div>
-                    <div class="stat-info">
-                        <div class="stat-label">Hari Ini</div>
-                        <div class="stat-sub">Transaksi</div>
-                    </div>
-                </div>
-                <div class="stat-value"><?php echo $total_transactions['total'] ?? 0; ?></div>
-                <a href="modules/kasir/transaksi.php?type=penjual" class="stat-button">
-                    🏪 Ke Penjual
-                </a>
+            <div class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+                <?php echo formatRupiah($sales_today['total'] ?? 0); ?>
             </div>
-            
-            <!-- Gudang Card -->
-            <div class="stat-card gudang">
-                <div class="stat-header">
-                    <div class="stat-icon">📦</div>
-                    <div class="stat-info">
-                        <div class="stat-label">Gudang</div>
-                        <div class="stat-sub">Kelola Stok</div>
-                    </div>
+            <a href="modules/kasir/transaksi.php?type=pembeli" class="block w-full py-5 px-4 bg-gray-100 hover:bg-gray-200 rounded-xl text-center text-xl font-bold text-gray-800 hover:-translate-y-1 transition-all duration-300">
+                ➕ Transaksi Baru
+            </a>
+        </div>
+
+        <!-- Transactions Card -->
+        <div class="bg-white p-6 rounded-xl shadow-md border-t-8 border-green-500">
+            <div class="flex justify-between items-start mb-4">
+                <div class="text-5xl">📝</div>
+                <div class="text-right">
+                    <div class="text-lg text-gray-600">Hari Ini</div>
+                    <div class="text-sm text-gray-500">Transaksi</div>
                 </div>
-                <div class="stat-value">-</div>
-                <a href="modules/gudang/stock-opname.php" class="stat-button">
-                    📋 Cek Stok
-                </a>
             </div>
-            
-            <!-- Admin/Kasir Card -->
-            <div class="stat-card <?php echo $is_admin ? 'admin' : 'transactions'; ?>">
-                <div class="stat-header">
-                    <div class="stat-icon"><?php echo $is_admin ? '🔐' : '👤'; ?></div>
-                    <div class="stat-info">
-                        <div class="stat-label"><?php echo $is_admin ? 'Admin' : 'Kasir'; ?></div>
-                        <div class="stat-sub">Mode</div>
-                    </div>
+            <div class="text-5xl md:text-6xl font-bold text-gray-800 mb-4">
+                <?php echo $total_transactions['total'] ?? 0; ?>
+            </div>
+            <a href="modules/kasir/transaksi.php?type=penjual" class="block w-full py-5 px-4 bg-gray-100 hover:bg-gray-200 rounded-xl text-center text-xl font-bold text-gray-800 hover:-translate-y-1 transition-all duration-300">
+                🏪 Ke Penjual
+            </a>
+        </div>
+
+        <!-- Gudang Card -->
+        <div class="bg-white p-6 rounded-xl shadow-md border-t-8 border-orange-500">
+            <div class="flex justify-between items-start mb-4">
+                <div class="text-5xl">📦</div>
+                <div class="text-right">
+                    <div class="text-lg text-gray-600">Gudang</div>
+                    <div class="text-sm text-gray-500">Kelola Stok</div>
                 </div>
-                <div class="stat-value"><?php echo $is_admin ? 'Full Akses' : 'Terbatas'; ?></div>
-                <?php if ($is_admin): ?>
-                <a href="modules/admin/laporan.php" class="stat-button">
+            </div>
+            <div class="text-5xl md:text-6xl font-bold text-gray-800 mb-4">-</div>
+            <a href="modules/gudang/stock-opname.php" class="block w-full py-5 px-4 bg-gray-100 hover:bg-gray-200 rounded-xl text-center text-xl font-bold text-gray-800 hover:-translate-y-1 transition-all duration-300">
+                📋 Cek Stok
+            </a>
+        </div>
+
+        <!-- Admin/Kasir Card -->
+        <div class="bg-white p-6 rounded-xl shadow-md border-t-8 <?php echo $is_admin ? 'border-purple-500' : 'border-green-500'; ?>">
+            <div class="flex justify-between items-start mb-4">
+                <div class="text-5xl"><?php echo $is_admin ? '🔐' : '👤'; ?></div>
+                <div class="text-right">
+                    <div class="text-lg text-gray-600"><?php echo $is_admin ? 'Admin' : 'Kasir'; ?></div>
+                    <div class="text-sm text-gray-500">Mode</div>
+                </div>
+            </div>
+            <div class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                <?php echo $is_admin ? 'Full Akses' : 'Terbatas'; ?>
+            </div>
+            <?php if ($is_admin): ?>
+                <a href="modules/admin/laporan.php" class="block w-full py-5 px-4 bg-gray-100 hover:bg-gray-200 rounded-xl text-center text-xl font-bold text-gray-800 hover:-translate-y-1 transition-all duration-300">
                     📊 Lihat Laporan
                 </a>
-                <?php else: ?>
-                <a href="modules/kasir/" class="stat-button">
+            <?php else: ?>
+                <a href="modules/kasir/" class="block w-full py-5 px-4 bg-gray-100 hover:bg-gray-200 rounded-xl text-center text-xl font-bold text-gray-800 hover:-translate-y-1 transition-all duration-300">
                     📝 Riwayat Saya
                 </a>
-                <?php endif; ?>
-            </div>
+            <?php endif; ?>
         </div>
-        
-        <!-- RECENT TRANSACTIONS -->
-        <div class="section-title">
-            <span>📝 TRANSAKSI TERAKHIR</span>
-            <a href="modules/kasir/" style="font-size: 18px; color: #3498db; text-decoration: none;">Lihat Semua →</a>
-        </div>
-        
-        <?php if ($recent->num_rows > 0): ?>
-        <table class="transactions-table">
-            <thead>
+    </div>
+
+    <!-- RECENT TRANSACTIONS -->
+    <div class="flex justify-between items-center mb-5">
+        <div class="text-2xl md:text-3xl font-bold text-gray-800">📝 TRANSAKSI TERAKHIR</div>
+        <a href="modules/kasir/" class="text-lg md:text-xl text-blue-600 hover:text-blue-800 font-semibold hover:underline">
+            Lihat Semua →
+        </a>
+    </div>
+
+    <?php if ($recent->num_rows > 0): ?>
+        <div class="table-responsive">
+            <table class="w-full bg-white rounded-xl shadow-md overflow-hidden">
+                <thead class="bg-gray-100">
                 <tr>
-                    <th>Waktu</th>
-                    <th>Barang</th>
-                    <th>Jenis</th>
-                    <th>Jumlah</th>
-                    <th>Total</th>
+                    <th class="p-5 text-left font-bold text-gray-800 text-base md:text-lg">Waktu</th>
+                    <th class="p-5 text-left font-bold text-gray-800 text-base md:text-lg">Barang</th>
+                    <th class="p-5 text-left font-bold text-gray-800 text-base md:text-lg">Jenis</th>
+                    <th class="p-5 text-left font-bold text-gray-800 text-base md:text-lg">Jumlah</th>
+                    <th class="p-5 text-left font-bold text-gray-800 text-base md:text-lg">Total</th>
                 </tr>
-            </thead>
-            <tbody>
+                </thead>
+                <tbody>
                 <?php while ($transaction = $recent->fetch_assoc()): ?>
-                <tr>
-                    <td><?php echo date('H:i', strtotime($transaction['tanggal'])); ?></td>
-                    <td><?php echo htmlspecialchars(substr($transaction['nama_barang'], 0, 20)); ?></td>
-                    <td>
-                        <span class="transaction-type <?php echo $transaction['jenis_pembeli'] == 'pembeli' ? 'type-pembeli' : 'type-penjual'; ?>">
-                            <?php echo $transaction['jenis_pembeli'] == 'pembeli' ? 'Pembeli' : 'Penjual'; ?>
-                        </span>
-                    </td>
-                    <td><?php echo $transaction['jumlah']; ?></td>
-                    <td style="font-weight: bold;"><?php echo formatRupiah($transaction['total_harga']); ?></td>
-                </tr>
+                    <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                        <td class="p-5 text-gray-700"><?php echo date('H:i', strtotime($transaction['tanggal'])); ?></td>
+                        <td class="p-5 text-gray-700"><?php echo htmlspecialchars(substr($transaction['nama_barang'], 0, 20)); ?></td>
+                        <td class="p-5">
+                            <span class="inline-block px-4 py-2 rounded-full text-sm md:text-base font-bold <?php echo $transaction['jenis_pembeli'] == 'pembeli' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?>">
+                                <?php echo $transaction['jenis_pembeli'] == 'pembeli' ? 'Pembeli' : 'Penjual'; ?>
+                            </span>
+                        </td>
+                        <td class="p-5 text-gray-700"><?php echo $transaction['jumlah']; ?></td>
+                        <td class="p-5 font-bold text-gray-800"><?php echo formatRupiah($transaction['total_harga']); ?></td>
+                    </tr>
                 <?php endwhile; ?>
-            </tbody>
-        </table>
-        <?php else: ?>
-        <div class="no-data">
-            <span class="no-data-icon">📄</span>
-            <p>Belum ada transaksi hari ini</p>
-            <a href="modules/kasir/transaksi.php" 
-               style="display: inline-block; margin-top: 20px; padding: 15px 30px; background: #3498db; color: white; text-decoration: none; border-radius: 10px; font-weight: bold;">
+                </tbody>
+            </table>
+        </div>
+    <?php else: ?>
+        <div class="bg-white p-12 rounded-xl shadow-md text-center">
+            <div class="text-7xl mb-5">📄</div>
+            <p class="text-2xl text-gray-600 mb-6">Belum ada transaksi hari ini</p>
+            <a href="modules/kasir/transaksi.php"
+               class="inline-block px-8 py-5 bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold rounded-xl transition-all duration-300 hover:-translate-y-1 shadow-lg">
                 Buat Transaksi Pertama
             </a>
         </div>
-        <?php endif; ?>
-    </div>
-    
-    <!-- MOBILE NAVIGATION -->
-    <nav class="nav-mobile">
-        <a href="modules/kasir/transaksi.php?type=pembeli" class="nav-item">
-            <span class="nav-icon">💳</span>
-            <span class="nav-label">Kasir</span>
+    <?php endif; ?>
+</div>
+
+<!-- MOBILE NAVIGATION - visible only on mobile -->
+<div class="md:hidden flex justify-around bg-white fixed bottom-0 left-0 right-0 py-3 shadow-up-lg z-50 border-t border-gray-200">
+    <a href="modules/kasir/transaksi.php?type=pembeli" class="nav-item flex flex-col items-center px-3 py-2 text-gray-600 hover:text-blue-600 transition">
+        <span class="text-3xl">💳</span>
+        <span class="text-xs font-bold mt-1">Kasir</span>
+    </a>
+    <a href="modules/gudang/" class="nav-item flex flex-col items-center px-3 py-2 text-gray-600 hover:text-blue-600 transition">
+        <span class="text-3xl">📦</span>
+        <span class="text-xs font-bold mt-1">Gudang</span>
+    </a>
+    <a href="dashboard.php" class="nav-item flex flex-col items-center px-3 py-2 text-blue-600">
+        <span class="text-3xl">🏠</span>
+        <span class="text-xs font-bold mt-1">Home</span>
+    </a>
+    <?php if ($is_admin): ?>
+        <a href="modules/admin/laporan.php" class="nav-item flex flex-col items-center px-3 py-2 text-gray-600 hover:text-blue-600 transition">
+            <span class="text-3xl">📊</span>
+            <span class="text-xs font-bold mt-1">Laporan</span>
         </a>
-        <a href="modules/gudang/" class="nav-item">
-            <span class="nav-icon">📦</span>
-            <span class="nav-label">Gudang</span>
-        </a>
-        <a href="dashboard.php" class="nav-item active">
-            <span class="nav-icon">🏠</span>
-            <span class="nav-label">Home</span>
-        </a>
-        <?php if ($is_admin): ?>
-        <a href="modules/admin/laporan.php" class="nav-item">
-            <span class="nav-icon">📊</span>
-            <span class="nav-label">Laporan</span>
-        </a>
-        <?php endif; ?>
-        <a href="logout.php" class="nav-item">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-label">Keluar</span>
-        </a>
-    </nav>
-    
-    <script>
-        // Make tables scrollable on mobile
-        document.addEventListener('DOMContentLoaded', function() {
-            const tables = document.querySelectorAll('table');
-            tables.forEach(table => {
+    <?php endif; ?>
+    <a href="logout.php" class="nav-item flex flex-col items-center px-3 py-2 text-gray-600 hover:text-red-600 transition">
+        <span class="text-3xl">🚪</span>
+        <span class="text-xs font-bold mt-1">Keluar</span>
+    </a>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make tables responsive dengan wrapper
+        const tables = document.querySelectorAll('table');
+        tables.forEach(table => {
+            if (!table.parentElement.classList.contains('table-responsive')) {
                 const wrapper = document.createElement('div');
+                wrapper.className = 'table-responsive';
                 wrapper.style.overflowX = 'auto';
-                wrapper.style.marginBottom = '20px';
+                wrapper.style.marginBottom = '1rem';
                 table.parentNode.insertBefore(wrapper, table);
                 wrapper.appendChild(table);
+            }
+        });
+
+        // Touch feedback
+        document.querySelectorAll('a, button').forEach(el => {
+            el.addEventListener('touchstart', function() {
+                this.style.opacity = '0.7';
             });
-            
-            // Add touch feedback
-            document.querySelectorAll('.stat-button, .nav-item').forEach(btn => {
-                btn.addEventListener('touchstart', function() {
-                    this.style.opacity = '0.7';
-                });
-                btn.addEventListener('touchend', function() {
-                    this.style.opacity = '1';
-                });
+            el.addEventListener('touchend', function() {
+                this.style.opacity = '1';
             });
         });
-    </script>
+
+        // iOS zoom fix
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.style.fontSize = '16px';
+        });
+    });
+
+    // Active nav item untuk mobile
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.nav-item').forEach(item => {
+        if (item.getAttribute('href') === 'dashboard.php') {
+            item.classList.add('text-blue-600');
+            item.classList.remove('text-gray-600');
+        }
+    });
+</script>
 </body>
 </html>
