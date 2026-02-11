@@ -1,5 +1,13 @@
 # Sistem Kasir Botol
 ## Instalasi
+### Masuk ke root project
+``` bash
+cd sistem-kasir-botol
+```
+### Copy environment
+``` bash
+cp includes/config.php.example includes/config.php
+```
 ### Install Dependencies
 ``` bash
 npm install
